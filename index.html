@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REDD PAINEL - Cyberpunk Interface</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Orbitron & Share Tech Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        redd: {
+                            main: '#ff003c',
+                            dark: '#800000',
+                            glow: '#ff2a55',
+                            bg: '#050505',
+                            card: '#0d0205',
+                            border: '#3a0813'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        mono: ['Share Tech Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos Customizados Cyberpunk */
+        body {
+            background-color: #050505;
+            color: #e2e8f0;
+            font-family: 'Share Tech Mono', monospace;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        h1, h2, h3, .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Efeito de Scanline na Tela */
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(255, 0, 60, 0.03) 50%,
+                rgba(255, 0, 60, 0.03)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Fundo com Grade Cyberpunk */
+        .cyber-grid {
+            background-image: 
+                linear-gradient(to right, rgba(255, 0, 60, 0.07) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 0, 60, 0.07) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* Brilho e Neon */
+        .text-glow {
+            text-shadow: 0 0 8px rgba(255, 0, 60, 0.8), 0 0 15px rgba(255, 0, 60, 0.4);
+        }
+
+        .border-glow {
+            box-shadow: 0 0 10px rgba(255, 0, 60, 0.4), inset 0 0 10px rgba(255, 0, 60, 0.2);
+        }
+
+        .btn-cyber {
+            position: relative;
+            background: linear-gradient(135deg, #800000 0%, #ff003c 100%);
+            transition: all 0.2s ease;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+
+        .btn-cyber:hover {
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.8);
+            transform: translateY(-1px);
+        }
+
+        .btn-cyber:active {
+            transform: translateY(1px);
+        }
+
+        .card-cyber {
+            background: rgba(13, 2, 5, 0.85);
+            border: 1px solid rgba(255, 0, 60, 0.3);
+            backdrop-filter: blur(5px);
+            position: relative;
+        }
+
+        .card-cyber::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 8px; height: 8px;
+            border-top: 2px solid #ff003c;
+            border-left: 2px solid #ff003c;
+        }
+
+        .card-cyber::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 8px; height: 8px;
+            border-bottom: 2px solid #ff003c;
+            border-right: 2px solid #ff003c;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #800000;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff003c;
+        }
+
+        /* Animações Customizadas */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.3; transform: scale(0.98); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="cyber-grid min-h-screen text-slate-200">
+    <!-- Overlay de Scanlines -->
+    <div class="scanline"></div>
+
+    <!-- NOTIFICAÇÃO FLOATING -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ========================================== -->
+    <!-- TELA 1: CARREGAMENTO INICIAL (SPLASH SCREEN) -->
+    <!-- ========================================== -->
+    <div id="screen-loading" class="fixed inset-0 z-40 bg-black flex flex-col items-center justify-center p-4">
+        <div class="text-center max-w-md w-full">
+            <div class="relative w-28 h-28 mx-auto mb-6 flex items-center justify-center">
+                <div class="absolute inset-0 border-4 border-redd-dark rounded-full animate-ping opacity-25"></div>
+                <div class="absolute inset-0 border-4 border-t-redd-main border-r-transparent border-b-redd-dark border-l-transparent rounded-full animate-spin"></div>
+                <i class="fa-solid fa-crosshairs text-4xl text-redd-main text-glow"></i>
+            </div>
+            
+            <h1 class="text-3xl font-extrabold font-orbitron tracking-wider text-redd-main text-glow mb-2">REDD PAINEL</h1>
+            <p class="text-xs text-red-400 font-mono tracking-widest mb-6">INICIALIZANDO SUBSISTEMAS V4.2</p>
+
+            <!-- Barra de Progresso -->
+            <div class="w-full bg-slate-950 border border-redd-border rounded-sm h-4 p-0.5 mb-3 overflow-hidden">
+                <div id="loading-bar" class="bg-gradient-to-r from-redd-dark via-redd-main to-red-500 h-full w-0 transition-all duration-100 ease-out"></div>
+            </div>
+            
+            <div class="flex justify-between text-xs text-slate-400 font-mono">
+                <span id="loading-status">Carregando módulos...</span>
+                <span id="loading-percentage" class="text-redd-main">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 2: CARREGAMENTO CONCLUÍDO -->
+    <!-- ========================================== -->
+    <div id="screen-ready" class="fixed inset-0 z-30 bg-black flex flex-col items-center justify-center p-4 hidden">
+        <div class="card-cyber p-8 rounded-lg max-w-md w-full text-center border-glow">
+            <div class="w-16 h-16 bg-redd-main/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-redd-main">
+                <i class="fa-solid fa-shield-halved text-3xl text-redd-main"></i>
+            </div>
+            <h2 class="text-2xl font-bold font-orbitron text-white mb-1">ACESSO PRONTO</h2>
+            <p class="text-xs text-slate-400 mb-6">Todos os módulos de otimização e rastreio foram carregados com sucesso no sistema.</p>
+            
+            <div class="bg-black/60 p-3 rounded border border-redd-border text-left mb-6 font-mono text-xs text-red-300/80">
+                <div class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Núcleo de Visão Térmica: OK</div>
+                <div class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Algoritmo Red-Luz Track: OK</div>
+                <div class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> Criptografia de Conexão: ATIVA</div>
+            </div>
+
+            <button onclick="goToLogin()" class="btn-cyber w-full py-3 font-orbitron font-bold text-white tracking-widest text-sm uppercase">
+                Ir Para Login <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 3: LOGIN DE JOGADOR -->
+    <!-- ========================================== -->
+    <div id="screen-login" class="fixed inset-0 z-20 bg-black/95 flex flex-col items-center justify-center p-4 hidden">
+        <div class="card-cyber p-8 rounded-lg max-w-md w-full border-glow">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-black font-orbitron text-redd-main text-glow tracking-wider">REDD PAINEL</h1>
+                <p class="text-xs text-slate-400 mt-1">Insira suas credenciais cadastradas pelo administrador</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-red-400 font-mono mb-1">USUÁRIO / PLAYER ID</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="login-username" required placeholder="Digite seu usuário..." 
+                            class="w-full pl-10 pr-3 py-2 bg-black border border-redd-border rounded focus:border-redd-main focus:outline-none text-white text-sm font-mono transition-colors">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-red-400 font-mono mb-1">CHAVE DE ACESSO (SENHA)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="login-password" required placeholder="••••••••" 
+                            class="w-full pl-10 pr-3 py-2 bg-black border border-redd-border rounded focus:border-redd-main focus:outline-none text-white text-sm font-mono transition-colors">
+                    </div>
+                </div>
+
+                <div class="p-3 bg-red-950/20 border border-redd-border rounded text-xs text-slate-400 flex items-start gap-2">
+                    <i class="fa-solid fa-circle-info text-redd-main mt-0.5"></i>
+                    <span>Caso não possua conta, solicite o cadastro de novo operador junto ao Administrador do grupo.</span>
+                </div>
+
+                <button type="submit" class="btn-cyber w-full py-3 font-orbitron font-bold text-white tracking-widest text-sm uppercase">
+                    AUTENTICAR ACESSO
+                </button>
+            </form>
+
+            <!-- Botão Demo Rápido -->
+            <div class="mt-4 pt-4 border-t border-slate-900 text-center">
+                <button type="button" onclick="fillDemoCredentials()" class="text-xs text-red-400/70 hover:text-redd-main underline font-mono">
+                    [Preencher Credenciais Oficiais do Operador]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 4: PAINEL PRINCIPAL (DASHBOARD) -->
+    <!-- ========================================== -->
+    <div id="screen-dashboard" class="min-h-screen flex flex-col hidden">
+        
+        <!-- HEADER / TOPO -->
+        <header class="bg-black/90 border-b border-redd-border px-4 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-10 backdrop-blur">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded bg-redd-main/20 border border-redd-main flex items-center justify-center text-redd-main font-bold">
+                    <i class="fa-solid fa-crosshairs text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black font-orbitron text-redd-main text-glow leading-none">REDD PAINEL</h1>
+                    <span class="text-[10px] text-slate-400 font-mono tracking-widest">SISTEMA CIBERNÉTICO DE RASTREIO V4.2</span>
+                </div>
+            </div>
+
+            <!-- Stats Rápidos Topo -->
+            <div class="flex items-center gap-4 text-xs font-mono">
+                <div class="hidden sm:flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded border border-slate-900">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span class="text-slate-400">STATUS:</span>
+                    <span class="text-green-400 font-bold">SISTEMA ATIVO</span>
+                </div>
+
+                <div class="bg-slate-950 px-3 py-1.5 rounded border border-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear text-redd-main"></i>
+                    <span class="text-slate-400">OPERADOR:</span>
+                    <span id="display-username" class="text-white font-bold">JOGADOR</span>
+                </div>
+
+                <div class="hidden md:block bg-slate-950 px-3 py-1.5 rounded border border-slate-900">
+                    <span id="system-clock" class="text-redd-main font-bold">00:00:00</span>
+                </div>
+
+                <button onclick="logout()" class="p-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded border border-redd-border transition-colors" title="Sair do Sistema">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO PRINCIPAL (COM MENU DE ABAS) -->
+        <div class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <!-- MENU LATERAL DE NAVEGAÇÃO -->
+            <aside class="lg:col-span-1 space-y-4">
+                <div class="card-cyber p-4 rounded-lg">
+                    <h2 class="text-xs font-orbitron font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Módulos do Sistema</h2>
+                    <nav class="space-y-1">
+                        <button onclick="switchTab('tab-tracking')" id="nav-tracking" class="tab-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm font-mono transition-all text-white bg-redd-dark/50 border border-redd-main">
+                            <i class="fa-solid fa-radar text-redd-main"></i>
+                            <span>Seguir Luz Vermelha</span>
+                        </button>
+
+                        <button onclick="switchTab('tab-stats')" id="nav-stats" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm font-mono transition-all text-slate-400 hover:text-white hover:bg-slate-900/60 border border-transparent">
+                            <i class="fa-solid fa-chart-line text-redd-main"></i>
+                            <span>Estatísticas & Logs</span>
+                        </button>
+
+                        <button onclick="switchTab('tab-settings')" id="nav-settings" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm font-mono transition-all text-slate-400 hover:text-white hover:bg-slate-900/60 border border-transparent">
+                            <i class="fa-solid fa-sliders text-redd-main"></i>
+                            <span>Configurações</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- PAINEL DE CONTROLE RÁPIDO DO BOT -->
+                <div class="card-cyber p-4 rounded-lg space-y-3">
+                    <h2 class="text-xs font-orbitron font-bold text-slate-400 uppercase tracking-wider">Status do Rastreador</h2>
+                    
+                    <div class="flex items-center justify-between p-2.5 bg-black rounded border border-slate-900">
+                        <span class="text-xs font-mono text-slate-300">Auto-Tracking:</span>
+                        <button id="toggle-tracking-btn" onclick="toggleTracking()" class="px-3 py-1 rounded text-xs font-mono font-bold bg-green-950 text-green-400 border border-green-800">
+                            ATIVADO
+                        </button>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-slate-400">Sensibilidade:</span>
+                            <span id="sensitivity-val" class="text-redd-main">85%</span>
+                        </div>
+                        <input type="range" id="sensitivity-slider" min="10" max="100" value="85" oninput="updateSensitivity(this.value)" class="w-full accent-redd-main bg-black h-1.5 rounded cursor-pointer">
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-slate-400">Raio de Busca (px):</span>
+                            <span id="radius-val" class="text-redd-main">180</span>
+                        </div>
+                        <input type="range" id="radius-slider" min="50" max="300" value="180" oninput="updateRadius(this.value)" class="w-full accent-redd-main bg-black h-1.5 rounded cursor-pointer">
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ÁREA CENTRAL DE CONTEÚDO -->
+            <main class="lg:col-span-3 space-y-6">
+                
+                <!-- ABA 1: MAPA TÁTICO / SEGUIR LUZ VERMELHA -->
+                <section id="tab-tracking" class="tab-content block space-y-4">
+                    <div class="card-cyber p-4 rounded-lg">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-redd-main animate-ping"></span>
+                                <h2 class="font-orbitron font-bold text-white text-base">MAPA TÁTICO DE RASTREAMENTO EM TEMPO REAL</h2>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="resetRedLightPosition()" class="px-2.5 py-1 text-xs font-mono bg-slate-900 hover:bg-slate-800 text-slate-300 rounded border border-slate-700">
+                                    <i class="fa-solid fa-arrows-rotate mr-1"></i> Mover Luz
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- MAPA EM CANVAS -->
+                        <div class="relative w-full bg-black rounded border border-redd-border overflow-hidden" style="min-height: 380px;">
+                            <canvas id="tactical-map" class="w-full h-full block cursor-crosshair"></canvas>
+                            
+                            <!-- Legenda Sobreposta no Canvas -->
+                            <div class="absolute bottom-3 left-3 bg-black/80 p-2 rounded border border-slate-800 text-[11px] font-mono space-y-1 backdrop-blur pointer-events-none">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-red-600 inline-block border border-white"></span>
+                                    <span class="text-slate-300">Luz Vermelha (Alvo Movel)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block border border-white"></span>
+                                    <span class="text-slate-300">Bot Rastreador (Auto-Follow)</span>
+                                </div>
+                            </div>
+
+                            <!-- Overlay de Status -->
+                            <div class="absolute top-3 right-3 bg-black/80 px-3 py-1.5 rounded border border-slate-800 text-xs font-mono text-slate-300 backdrop-blur pointer-events-none">
+                                DISTÂNCIA DO ALVO: <span id="target-distance" class="text-redd-main font-bold">0 px</span>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-400 font-mono mt-3">
+                            <i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Dica: O bot rastreador ajusta a trajetória automaticamente para seguir o ponto vermelho. Clique em qualquer lugar no mapa para posicionar manualmente a Luz Vermelha.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- ABA 2: ESTATÍSTICAS -->
+                <section id="tab-stats" class="tab-content hidden space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="card-cyber p-4 rounded-lg">
+                            <span class="text-xs text-slate-400 font-mono">TAXA DE PRECISÃO</span>
+                            <div class="text-2xl font-black font-orbitron text-redd-main mt-1" id="stat-accuracy">98.4%</div>
+                            <span class="text-[10px] text-green-400 font-mono">+1.2% comparado ao último ciclo</span>
+                        </div>
+
+                        <div class="card-cyber p-4 rounded-lg">
+                            <span class="text-xs text-slate-400 font-mono">LATÊNCIA DA REDE</span>
+                            <div class="text-2xl font-black font-orbitron text-white mt-1"><span id="stat-ping">12</span> ms</div>
+                            <span class="text-[10px] text-slate-400 font-mono">Servidor Primário Brasil</span>
+                        </div>
+
+                        <div class="card-cyber p-4 rounded-lg">
+                            <span class="text-xs text-slate-400 font-mono">TAXA DE FRAMES</span>
+                            <div class="text-2xl font-black font-orbitron text-white mt-1"><span id="stat-fps">60</span> FPS</div>
+                            <span class="text-[10px] text-green-400 font-mono">Estável / Sem Render Drops</span>
+                        </div>
+
+                        <div class="card-cyber p-4 rounded-lg">
+                            <span class="text-xs text-slate-400 font-mono">ALVOS BLOQUEADOS</span>
+                            <div class="text-2xl font-black font-orbitron text-redd-main mt-1" id="stat-targets">1,420</div>
+                            <span class="text-[10px] text-slate-400 font-mono">Sessão Atual</span>
+                        </div>
+                    </div>
+
+                    <!-- REGISTRO DE LOGS DO SISTEMA -->
+                    <div class="card-cyber p-4 rounded-lg space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-orbitron font-bold text-white text-sm">LOGS DE ATIVIDADE DO PAINEL</h3>
+                            <button onclick="clearLogs()" class="text-xs font-mono text-slate-400 hover:text-redd-main">Limpar Logs</button>
+                        </div>
+                        <div id="system-logs" class="bg-black/90 p-3 rounded border border-slate-900 font-mono text-xs text-slate-300 h-48 overflow-y-auto space-y-1">
+                            <!-- Logs via JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ABA 3: CONFIGURAÇÕES -->
+                <section id="tab-settings" class="tab-content hidden space-y-4">
+                    <div class="card-cyber p-5 rounded-lg space-y-6">
+                        <h2 class="font-orbitron font-bold text-white text-lg border-b border-slate-800 pb-2">PREFERÊNCIAS E DESEMPENHO</h2>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-sm text-white">Modo Alta Performance (FPS Alto)</h4>
+                                    <p class="text-xs text-slate-400">Otimiza a renderização de elementos gráficos no Canvas.</p>
+                                </div>
+                                <input type="checkbox" checked class="w-5 h-5 accent-redd-main rounded cursor-pointer">
+                            </div>
+
+                            <div class="flex items-center justify-between border-t border-slate-900 pt-3">
+                                <div>
+                                    <h4 class="font-bold text-sm text-white">Opacidade da Grade Cyberpunk</h4>
+                                    <p class="text-xs text-slate-400">Ajusta o contraste do padrão de fundo.</p>
+                                </div>
+                                <input type="range" min="10" max="100" value="70" class="w-32 accent-redd-main bg-black h-1.5 rounded cursor-pointer">
+                            </div>
+
+                            <div class="flex items-center justify-between border-t border-slate-900 pt-3">
+                                <div>
+                                    <h4 class="font-bold text-sm text-white">Sons de Alertas Táticos</h4>
+                                    <p class="text-xs text-slate-400">Ativa bipes ao travar no alvo vermelho.</p>
+                                </div>
+                                <input type="checkbox" class="w-5 h-5 accent-redd-main rounded cursor-pointer">
+                            </div>
+
+                            <div class="border-t border-slate-900 pt-3">
+                                <h4 class="font-bold text-sm text-white mb-2">Atalhos do Teclado</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                                    <div class="bg-black p-2 rounded border border-slate-900 flex justify-between">
+                                        <span class="text-slate-400">Alternar Tracking:</span>
+                                        <span class="text-redd-main font-bold">ESPAÇO</span>
+                                    </div>
+                                    <div class="bg-black p-2 rounded border border-slate-900 flex justify-between">
+                                        <span class="text-slate-400">Mover Alvo Aleatório:</span>
+                                        <span class="text-redd-main font-bold">TECLA R</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-800 flex justify-end">
+                            <button onclick="saveSettings()" class="btn-cyber px-6 py-2.5 font-orbitron font-bold text-white text-xs uppercase">
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="mt-auto border-t border-slate-900 bg-black/80 py-3 text-center text-xs font-mono text-slate-500">
+            <p>REDD PAINEL &copy; 2026 - Módulo Exclusivo Cyberpunk. Todos os direitos reservados aos operadores autorizados.</p>
+        </footer>
+    </div>
+
+    <!-- LÓGICA E SCRIPTS JAVASCRIPT -->
+    <script>
+        /* ========================================================
+           SISTEMA DE ESTADO & NAVEGAÇÃO
+           ======================================================== */
+        let currentUser = null;
+        let isTrackingActive = true;
+        let trackingSensitivity = 0.85;
+        let searchRadius = 180;
+        let animationFrameId = null;
+        let targetCount = 1420;
+
+        // Credenciais Oficiais
+        const VALID_USER = "redd_anarchy";
+        const VALID_PASS = "franeouza89072f8946f";
+
+        // Elementos do Canvas do Mapa Tático
+        let canvas, ctx;
+        let redLight = { x: 200, y: 150, vx: 2, vy: 1.5, radius: 8 };
+        let trackerBot = { x: 50, y: 50, radius: 10, speed: 2.5 };
+
+        // Inicialização na Carga da Janela
+        window.onload = function() {
+            startLoadingSequence();
+            initClock();
+        };
+
+        /* ========================================================
+           1. FLUXO DE CARREGAMENTO (SPLASH SCREEN)
+           ======================================================== */
+        function startLoadingSequence() {
+            const progressBar = document.getElementById('loading-bar');
+            const progressText = document.getElementById('loading-percentage');
+            const statusText = document.getElementById('loading-status');
+
+            const statuses = [
+                "Iniciando firmware...",
+                "Carregando módulos visuais...",
+                "Sincronizando com servidor...",
+                "Calibrando rastreador de luz...",
+                "Sistema pronto!"
+            ];
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 8) + 3;
+                if (progress > 100) progress = 100;
+
+                progressBar.style.width = progress + '%';
+                progressText.innerText = progress + '%';
+
+                if (progress < 25) statusText.innerText = statuses[0];
+                else if (progress < 50) statusText.innerText = statuses[1];
+                else if (progress < 75) statusText.innerText = statuses[2];
+                else if (progress < 98) statusText.innerText = statuses[3];
+                else statusText.innerText = statuses[4];
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('screen-loading').classList.add('hidden');
+                        document.getElementById('screen-ready').classList.remove('hidden');
+                    }, 400);
+                }
+            }, 100);
+        }
+
+        function goToLogin() {
+            document.getElementById('screen-ready').classList.add('hidden');
+            document.getElementById('screen-login').classList.remove('hidden');
+            fillDemoCredentials();
+        }
+
+        /* ========================================================
+           2. TELA DE LOGIN COM VALIDAÇÃO DE CREDENCIAIS
+           ======================================================== */
+        function fillDemoCredentials() {
+            document.getElementById('login-username').value = VALID_USER;
+            document.getElementById('login-password').value = VALID_PASS;
+            showToast("Credenciais oficiais inseridas!", "info");
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userVal = document.getElementById('login-username').value.trim();
+            const passVal = document.getElementById('login-password').value.trim();
+
+            if (userVal === VALID_USER && passVal === VALID_PASS) {
+                currentUser = userVal;
+                document.getElementById('display-username').innerText = currentUser.toUpperCase();
+                
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-dashboard').classList.remove('hidden');
+
+                showToast(`Acesso Concedido! Bem-vindo, ${currentUser}.`, "success");
+                addLog(`Usuário '${currentUser}' autenticado com sucesso.`);
+                
+                // Inicializa Canvas e Mapa Tático
+                initTacticalMap();
+            } else {
+                showToast("Acesso Negado! Credenciais inválidas.", "error");
+                addLog(`Tentativa falha de login para o usuário '${userVal}'.`);
+            }
+        }
+
+        function logout() {
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            document.getElementById('screen-dashboard').classList.add('hidden');
+            document.getElementById('screen-login').classList.remove('hidden');
+            addLog(`Sessão encerrada.`);
+            showToast("Você saiu do sistema.", "info");
+        }
+
+        /* ========================================================
+           3. NAVEGAÇÃO DE ABAS
+           ======================================================== */
+        function switchTab(tabId) {
+            // Oculta todos os conteúdos
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-redd-dark/50', 'border-redd-main', 'text-white');
+                btn.classList.add('text-slate-400', 'border-transparent');
+            });
+
+            // Mostra o ativo
+            document.getElementById(tabId).classList.remove('hidden');
+
+            const activeBtn = document.getElementById('nav-' + tabId.replace('tab-', ''));
+            if(activeBtn) {
+                activeBtn.classList.add('bg-redd-dark/50', 'border-redd-main', 'text-white');
+                activeBtn.classList.remove('text-slate-400', 'border-transparent');
+            }
+
+            if(tabId === 'tab-tracking') {
+                // Resize Canvas para ajustar se mudou de aba
+                resizeCanvas();
+            }
+        }
+
+        /* ========================================================
+           4. MAPA TÁTICO & ALGORITMO SEGUIR LUZ VERMELHA
+           ======================================================== */
+        function initTacticalMap() {
+            canvas = document.getElementById('tactical-map');
+            ctx = canvas.getContext('2d');
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Clique no Canvas altera a posição da luz vermelha
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                redLight.x = e.clientX - rect.left;
+                redLight.y = e.clientY - rect.top;
+                addLog(`Luz Vermelha realocada manualmente para [X:${Math.round(redLight.x)}, Y:${Math.round(redLight.y)}]`);
+            });
+
+            // Teclas de atalho
+            window.addEventListener('keydown', function(e) {
+                if(e.code === 'Space') {
+                    toggleTracking();
+                } else if(e.code === 'KeyR') {
+                    resetRedLightPosition();
+                }
+            });
+
+            // Inicia Loop
+            requestAnimationFrame(updateTacticalMap);
+        }
+
+        function resizeCanvas() {
+            if(!canvas) return;
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = Math.max(380, container.clientHeight);
+        }
+
+        function resetRedLightPosition() {
+            if(!canvas) return;
+            redLight.x = Math.random() * (canvas.width - 40) + 20;
+            redLight.y = Math.random() * (canvas.height - 40) + 20;
+            addLog(`Luz Vermelha redefinida para nova posição aleatória.`);
+        }
+
+        function toggleTracking() {
+            isTrackingActive = !isTrackingActive;
+            const btn = document.getElementById('toggle-tracking-btn');
+            if(isTrackingActive) {
+                btn.innerText = "ATIVADO";
+                btn.className = "px-3 py-1 rounded text-xs font-mono font-bold bg-green-950 text-green-400 border border-green-800";
+                showToast("Auto-Tracking Ativado!", "success");
+                addLog("Auto-Tracking de luz foi ativado.");
+            } else {
+                btn.innerText = "DESATIVADO";
+                btn.className = "px-3 py-1 rounded text-xs font-mono font-bold bg-red-950 text-red-400 border border-red-800";
+                showToast("Auto-Tracking Pausado.", "info");
+                addLog("Auto-Tracking de luz foi desativado.");
+            }
+        }
+
+        function updateSensitivity(val) {
+            trackingSensitivity = val / 100;
+            document.getElementById('sensitivity-val').innerText = val + '%';
+        }
+
+        function updateRadius(val) {
+            searchRadius = parseInt(val);
+            document.getElementById('radius-val').innerText = val;
+        }
+
+        function updateTacticalMap() {
+            if (!canvas || !ctx) return;
+
+            // Limpa Tela
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Desenha Grade no Canvas
+            ctx.strokeStyle = 'rgba(255, 0, 60, 0.08)';
+            ctx.lineWidth = 1;
+            const gridSize = 25;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Movimento Autônomo da Luz Vermelha
+            redLight.x += redLight.vx;
+            redLight.y += redLight.vy;
+
+            // Bater nas bordas
+            if (redLight.x <= 15 || redLight.x >= canvas.width - 15) redLight.vx *= -1;
+            if (redLight.y <= 15 || redLight.y >= canvas.height - 15) redLight.vy *= -1;
+
+            // Lógica do Bot Rastreador (Seguir a Luz Vermelha)
+            const dx = redLight.x - trackerBot.x;
+            const dy = redLight.y - trackerBot.y;
+            const distance = Math.hypot(dx, dy);
+
+            document.getElementById('target-distance').innerText = Math.round(distance) + ' px';
+
+            if (isTrackingActive) {
+                if (distance < searchRadius) {
+                    // Mover em direção à luz baseado na sensibilidade
+                    const speed = trackerBot.speed * (0.5 + trackingSensitivity);
+                    trackerBot.x += (dx / distance) * speed;
+                    trackerBot.y += (dy / distance) * speed;
+
+                    // Desenha linha de trava de mira
+                    ctx.strokeStyle = 'rgba(255, 0, 60, 0.6)';
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(trackerBot.x, trackerBot.y);
+                    ctx.lineTo(redLight.x, redLight.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Incrementar contador de alvos processados pontualmente
+                    if(distance < 15 && Math.random() < 0.05) {
+                        targetCount++;
+                        document.getElementById('stat-targets').innerText = targetCount.toLocaleString();
+                    }
+                }
+            }
+
+            // Desenhar Raio de Busca ao redor do Bot
+            ctx.strokeStyle = 'rgba(0, 255, 200, 0.15)';
+            ctx.beginPath();
+            ctx.arc(trackerBot.x, trackerBot.y, searchRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Desenhar Luz Vermelha (Alvo)
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff003c';
+            ctx.fillStyle = '#ff003c';
+            ctx.beginPath();
+            ctx.arc(redLight.x, redLight.y, redLight.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Retículo da Luz Vermelha
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(redLight.x, redLight.y, redLight.radius + 4, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Desenhar Bot Rastreador (Ciano)
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#00f0ff';
+            ctx.fillStyle = '#00f0ff';
+            ctx.beginPath();
+            ctx.arc(trackerBot.x, trackerBot.y, trackerBot.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset
+
+            // Ícone do Bot
+            ctx.strokeStyle = '#050505';
+            ctx.beginPath();
+            ctx.moveTo(trackerBot.x - 4, trackerBot.y);
+            ctx.lineTo(trackerBot.x + 4, trackerBot.y);
+            ctx.moveTo(trackerBot.x, trackerBot.y - 4);
+            ctx.lineTo(trackerBot.x, trackerBot.y + 4);
+            ctx.stroke();
+
+            animationFrameId = requestAnimationFrame(updateTacticalMap);
+        }
+
+        /* ========================================================
+           5. UTILITÁRIOS, LOGS E RELEGIOS
+           ======================================================== */
+        function initClock() {
+            setInterval(() => {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const clockElem = document.getElementById('system-clock');
+                if (clockElem) clockElem.innerText = `${hours}:${minutes}:${seconds}`;
+
+                // Flutuação sutil de Ping nas Stats
+                const pingElem = document.getElementById('stat-ping');
+                if(pingElem && Math.random() < 0.3) {
+                    pingElem.innerText = Math.floor(Math.random() * 8) + 10;
+                }
+            }, 1000);
+        }
+
+        function addLog(msg) {
+            const logsContainer = document.getElementById('system-logs');
+            if (!logsContainer) return;
+
+            const timeStr = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'flex gap-2 text-slate-300';
+            logEntry.innerHTML = `<span class="text-slate-500">[${timeStr}]</span> <span>${msg}</span>`;
+            
+            logsContainer.prepend(logEntry);
+        }
+
+        function clearLogs() {
+            const logsContainer = document.getElementById('system-logs');
+            if(logsContainer) logsContainer.innerHTML = '';
+            addLog("Logs limpos pelo operador.");
+        }
+
+        function saveSettings() {
+            showToast("Configurações salvas com sucesso!", "success");
+            addLog("Preferências de desempenho atualizadas.");
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let bgColor = "bg-slate-900 border-slate-700 text-white";
+            if (type === "success") bgColor = "bg-black border-green-600 text-green-400";
+            if (type === "error") bgColor = "bg-black border-red-600 text-red-400";
+
+            toast.className = `px-4 py-2.5 rounded border shadow-lg text-xs font-mono transition-all duration-300 transform translate-x-5 ${bgColor} flex items-center gap-2`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => { toast.classList.remove('translate-x-5'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-5');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
